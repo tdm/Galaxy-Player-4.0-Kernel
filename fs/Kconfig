@@ -259,4 +259,6 @@ endif
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 
+source "fs/j4fs/Kconfig"
+
 endmenu

@@ -291,6 +291,11 @@ static void suspend(struct work_struct *work)
 
 	entry_event_num = current_event_num;
 	sys_sync();
+
+	//XXXTDM
+	pr_info("suspend: disabled due to bug\n");
+	return;
+
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("suspend: enter suspend\n");
 	ret = pm_suspend(requested_suspend_state);

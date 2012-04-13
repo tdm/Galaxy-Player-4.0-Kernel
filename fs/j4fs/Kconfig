@@ -1,0 +1,4 @@
+config J4FS_FS
+	tristate "Samsung J4FS"
+	help
+	  Samsung J4FS filesystem.

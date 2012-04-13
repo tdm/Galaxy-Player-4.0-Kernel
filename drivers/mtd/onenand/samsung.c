@@ -34,6 +34,8 @@
 #include <linux/string.h>
 #endif
 
+#include <linux/ctype.h>
+
 enum soc_type {
 	TYPE_S3C6400,
 	TYPE_S3C6410,
@@ -878,6 +880,157 @@ static void s3c_onenand_setup(struct mtd_info *mtd)
 	this->write_bufferram = onenand_write_bufferram;
 }
 
+#ifdef CONFIG_MTD_ONENAND_SAMSUNG_PIT
+/*
+ * PIT is on the second 256k block.  We only read about 4k, which is more
+ * than enough to find all the partitions.  But if we wanted to be really
+ * correct, we could read the header first to determine the actual number
+ * of partition entries and then do a second read for the data.
+ */
+#define MAX_PIT_PARTITIONS	30 /* For just under 4k: 28+30*132 = 3988 */
+#define PIT_OFFSET		(1*SZ_256K)
+#define PIT_SIGNATURE		0x12349876
+
+struct mtd_partition pit_partitions[MAX_PIT_PARTITIONS];
+
+struct s3c_pit_header /* 28 bytes */
+{
+	__u32	signature;
+	__u32	part_count;
+	char	unknown[20];
+};
+
+struct s3c_pit_partition /* 132 bytes */
+{
+	__u32	unused;		/* Is partition unused? */
+	__u32	chip_id;	/* Flash chip ID (0 is main/boot) */
+	__u32	part_id;	/* Partition ID? */
+	__u32	part_flags;	/* Partition flags? */
+	__u32	unknown1;
+	__u32	blk_size;	/* Block size in 1KB units */
+	__u32	blk_count;	/* Number of blocks */
+	__u32	unknown2;
+	__u32	unknown3;
+	char	name[32];	/* Partition name */
+	char	filename[64];	/* Filename for odin/heimdall */
+};
+
+
+
+struct s3c_pit_data
+{
+	struct s3c_pit_header		hdr;
+	struct s3c_pit_partition	part[MAX_PIT_PARTITIONS];
+};
+
+/*
+ * Partitions that we do not wish to expose:
+ *   IBL+PBL: Primary boot loader
+ *   PIT    : Partition table (this data)
+ *   SBL    : Secondary boot loader
+ *   SBL2   : Secondary boot loader backup (?)
+ */
+const char *s3c_pit_hidden_names[] = {
+	"ibl+pbl",
+	"pit",
+	"sbl",
+	"sbl2",
+};
+
+static void s3c_read_pit(struct mtd_info *mtd)
+{
+	__u8 *buf;
+	size_t nr_read;
+	struct s3c_pit_data *pit;
+
+	int i;
+	uint64_t off;
+
+	buf = kmalloc(sizeof(struct s3c_pit_data), GFP_KERNEL);
+	if (!buf) {
+		printk(KERN_ERR "PIT: out of memory\n");
+		return;
+	}
+
+	if (mtd->read(mtd, PIT_OFFSET, sizeof(struct s3c_pit_data), &nr_read, buf) != 0) {
+		printk(KERN_ERR "PIT: failed to read data\n");
+		goto out;
+	}
+	if (nr_read != sizeof(struct s3c_pit_data)) {
+		printk(KERN_ERR "PIT: short read: %u bytes\n", nr_read);
+		goto out;
+	}
+	pit = (struct s3c_pit_data *)buf;
+
+	if (pit->hdr.signature != PIT_SIGNATURE) {
+		printk(KERN_ERR "PIT: signature 0x%08x incorrect\n", pit->hdr.signature);
+		goto out;
+	}
+	DEBUG(MTD_DEBUG_LEVEL_3, "PIT: %u partitions\n", pit->hdr.part_count);
+	if (pit->hdr.part_count > MAX_PIT_PARTITIONS) {
+		printk(KERN_ERR "PIT: too many total partitions: %u\n", pit->hdr.part_count);
+		pit->hdr.part_count = MAX_PIT_PARTITIONS;
+	}
+
+	off = 0;
+	num_partitions = 0;
+	partitions = pit_partitions;
+	for (i = 0; i < pit->hdr.part_count; i++) {
+		struct s3c_pit_partition *pitpart = &pit->part[i];
+		struct mtd_partition *mtdpart = &partitions[num_partitions];
+		char *p;
+		unsigned int n;
+
+		/* XXX: Assume offset for unused partitions is unused/invalid */
+		if (pit->part[i].unused)
+			continue;
+
+		memset(mtdpart, 0, sizeof(struct mtd_partition));
+		mtdpart->size = pitpart->blk_size*1024 * pitpart->blk_count;
+		mtdpart->offset = off;
+		off += mtdpart->size;
+
+		pitpart->name[31] = '\0';
+		pitpart->filename[63] = '\0';
+
+		DEBUG(MTD_DEBUG_LEVEL_3, "PIT entry %d:\n", i);
+		DEBUG(MTD_DEBUG_LEVEL_3, "\tunused=0x%08x, chip_id=0x%08x, part_id=0x%08x\n",
+			pitpart->unused, pitpart->chip_id, pitpart->part_id);
+		DEBUG(MTD_DEBUG_LEVEL_3, "\tpart_flags=0x%08x, u1=0x%08x, blksz=0x%08x\n",
+			pitpart->part_flags, pitpart->unknown1, pitpart->blk_size);
+		DEBUG(MTD_DEBUG_LEVEL_3, "\tblkcnt=0x%08x, u2=0x%08x, u3=0x%08x\n",
+			pitpart->blk_count, pitpart->unknown2, pitpart->unknown3);
+		DEBUG(MTD_DEBUG_LEVEL_3, "\t, name=%s, filename=%s\n",
+			pitpart->name, pitpart->filename);
+
+		for (p = pitpart->name; *p; p++)
+			*p = tolower(*p);
+
+		for (n = 0; n < ARRAY_SIZE(s3c_pit_hidden_names); ++n)
+			if (!strcmp(pitpart->name, s3c_pit_hidden_names[n]))
+				pitpart->chip_id = 0xffffffff;
+
+		if (pitpart->chip_id != 0)
+			continue;
+
+		mtdpart->name = kstrdup(pitpart->name, GFP_KERNEL);
+		num_partitions++;
+	}
+
+	if (off < mtd->size) {
+		DEBUG(MTD_DEBUG_LEVEL_3, "PIT reservoir at 0x%08llx\n", off);
+		memset(&partitions[num_partitions], 0, sizeof(struct mtd_partition));
+		partitions[num_partitions].name = "reservoir";
+		partitions[num_partitions].size = MTDPART_SIZ_FULL;
+		partitions[num_partitions].offset = MTDPART_OFS_APPEND;
+		num_partitions++;
+	}
+
+out:
+	kfree(buf);
+}
+#endif /* CONFIG_MTD_ONENAND_SAMSUNG_PIT */
+
 static int s3c_onenand_probe(struct platform_device *pdev)
 {
 	struct onenand_platform_data *pdata;
@@ -1039,6 +1192,12 @@ static int s3c_onenand_probe(struct platform_device *pdev)
 		add_mtd_partitions(mtd, pdata->parts, pdata->nr_parts);
 	else
 #endif
+#ifdef CONFIG_MTD_ONENAND_SAMSUNG_PIT
+	if (num_partitions <= 0) {
+		s3c_read_pit(mtd);
+	}
+#endif
+
 	if (num_partitions <= 0) {
 		/* default partition table */
 		num_partitions = ARRAY_SIZE(s3c_partition_info);	/* pdata->nr_parts */

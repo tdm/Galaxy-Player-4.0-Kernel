@@ -1,0 +1,104 @@
+on early-init
+    start ueventd
+
+on init
+
+sysclktz 0
+
+loglevel 9
+
+# setup the global environment
+    export PATH /sbin:/vendor/bin:/system/sbin:/system/bin:/system/xbin
+    export LD_LIBRARY_PATH /vendor/lib:/system/lib
+    export ANDROID_BOOTLOGO 1
+    export ANDROID_ROOT /system
+    export ANDROID_ASSETS /system/app
+    export ANDROID_DATA /data
+    export EXTERNAL_STORAGE /sdcard
+
+    symlink /system/etc /etc
+
+    mkdir /sdcard
+    mkdir /preload
+    mkdir /system
+    mkdir /data
+    mkdir /cache
+    mkdir /efs
+    mkdir /tmp
+    mkdir /dbdata
+
+    mkdir /mnt 0775 root root
+
+    #mount /tmp /tmp tmpfs   
+
+on early-fs
+
+    # bml/stl drivers
+    insmod /lib/modules/fsr.ko
+    insmod /lib/modules/fsr_stl.ko
+
+    # parameter block
+    mkdir /mnt/.lfs 0755 root root
+    insmod /lib/modules/j4fs.ko
+    mount j4fs /dev/block/stl6 /mnt/.lfs
+    insmod /lib/modules/param.ko
+
+    #temp
+    chown root root /sbin/fat.format
+    chmod 750 /sbin/fat.format
+
+on fs
+    mount tmpfs tmpfs /tmp
+    mount yaffs2 mtd@factoryfs /system
+
+    #chown system system /efs
+    #chown radio radio /efs
+    chown radio system /efs
+    chmod 0771 /efs
+    mount vfat /dev/block/stl3 /efs ro nosuid nodev dmask=022 fmask=0133
+
+    exec apply_disk_policy
+
+on post-fs
+    mount rootfs rootfs / ro remount
+
+    write /proc/sys/kernel/panic_on_oops 1
+    write /proc/sys/kernel/hung_task_timeout_secs 0
+    write /proc/cpu/alignment 4
+    write /proc/sys/kernel/sched_latency_ns 10000000
+    write /proc/sys/kernel/sched_wakeup_granularity_ns 2000000
+    write /proc/sys/kernel/sched_compat_yield 1
+    write /proc/sys/kernel/sched_child_runs_first 0
+	
+on boot
+
+    ifup lo
+    hostname localhost
+    domainname localdomain
+
+    write /dev/graphics/fb3 1
+    umount /system
+
+    class_stop default
+    class_start recovery
+
+service ueventd /sbin/ueventd
+    critical
+    class recovery
+
+service console /sbin/ext/busybox sh
+    console
+    class recovery
+
+service recovery /sbin/recovery-loader
+    class recovery
+
+service adbd /sbin/adbd
+    enabled
+    class recovery
+
+on property:persist.service.adb.enable=1
+    start adbd
+
+on property:persist.service.adb.enable=0
+    stop adbd

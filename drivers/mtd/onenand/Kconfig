@@ -31,11 +31,17 @@ config MTD_ONENAND_OMAP2
 	  via the GPMC memory controller.
 
 config MTD_ONENAND_SAMSUNG
-        tristate "OneNAND on Samsung SOC controller support"
-        depends on MTD_ONENAND && (ARCH_S3C64XX || ARCH_S5PC100 || ARCH_S5PV210)
-        help
-          Support for a OneNAND flash device connected to an Samsung SOC
-          S3C64XX/S5PC1XX controller.
+	tristate "OneNAND on Samsung SOC controller support"
+	depends on MTD_ONENAND && (ARCH_S3C64XX || ARCH_S5PC100 || ARCH_S5PV210)
+	help
+	  Support for a OneNAND flash device connected to an Samsung SOC
+	  S3C64XX/S5PC1XX controller.
+
+config MTD_ONENAND_SAMSUNG_PIT
+	bool "Use PIT for Samsung OneNAND partition decoding"
+	depends on MTD_ONENAND_SAMSUNG
+	help
+	  Decode MTD partitions using proprietary Samsung PIT.
 
 config MTD_ONENAND_OTP
 	bool "OneNAND OTP Support"
