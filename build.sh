@@ -24,7 +24,6 @@ usage()
 opt_clean=""
 if [ "$1" = "clean" ]; then
 	make clean
-	rm -f .lastbuild
 	exit 0
 fi
 
@@ -42,12 +41,6 @@ fi
 if [ ! -d "../initramfs-${project}" ]; then
 	echo "Cannot find initramfs"
 	exit 1
-fi
-
-lastmodel=""
-lastproject=""
-if [ -f ".lastconfig" ]; then
-	. .lastconfig
 fi
 
 if [ ! -f ".config" -o "$model" != "$lastmodel" ]; then
@@ -74,7 +67,3 @@ cp $(find . -name "*.ko" | grep -v "$initramfsdir") "$initramfsdir/lib/modules"
 make -j${cpus}
 cp arch/arm/boot/zImage kernel-${model}-${project}.bin
 md5sum kernel-${model}-${project}.bin
-
-rm -f .lastconfig
-echo "lastmodel=$model" >> .lastconfig
-echo "lastproject=$project" >> .lastconfig
