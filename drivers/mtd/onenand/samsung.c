@@ -966,7 +966,7 @@ static void s3c_read_pit(struct mtd_info *mtd)
 		printk(KERN_ERR "PIT: signature 0x%08x incorrect\n", pit->hdr.signature);
 		goto out;
 	}
-	DEBUG(MTD_DEBUG_LEVEL_3, "PIT: %u partitions\n", pit->hdr.part_count);
+	DEBUG(MTD_DEBUG_LEVEL3, "PIT: %u partitions\n", pit->hdr.part_count);
 	if (pit->hdr.part_count > MAX_PIT_PARTITIONS) {
 		printk(KERN_ERR "PIT: too many total partitions: %u\n", pit->hdr.part_count);
 		pit->hdr.part_count = MAX_PIT_PARTITIONS;
@@ -993,14 +993,14 @@ static void s3c_read_pit(struct mtd_info *mtd)
 		pitpart->name[31] = '\0';
 		pitpart->filename[63] = '\0';
 
-		DEBUG(MTD_DEBUG_LEVEL_3, "PIT entry %d:\n", i);
-		DEBUG(MTD_DEBUG_LEVEL_3, "\tunused=0x%08x, chip_id=0x%08x, part_id=0x%08x\n",
+		DEBUG(MTD_DEBUG_LEVEL3, "PIT entry %d:\n", i);
+		DEBUG(MTD_DEBUG_LEVEL3, "\tunused=0x%08x, chip_id=0x%08x, part_id=0x%08x\n",
 			pitpart->unused, pitpart->chip_id, pitpart->part_id);
-		DEBUG(MTD_DEBUG_LEVEL_3, "\tpart_flags=0x%08x, u1=0x%08x, blksz=0x%08x\n",
+		DEBUG(MTD_DEBUG_LEVEL3, "\tpart_flags=0x%08x, u1=0x%08x, blksz=0x%08x\n",
 			pitpart->part_flags, pitpart->unknown1, pitpart->blk_size);
-		DEBUG(MTD_DEBUG_LEVEL_3, "\tblkcnt=0x%08x, u2=0x%08x, u3=0x%08x\n",
+		DEBUG(MTD_DEBUG_LEVEL3, "\tblkcnt=0x%08x, u2=0x%08x, u3=0x%08x\n",
 			pitpart->blk_count, pitpart->unknown2, pitpart->unknown3);
-		DEBUG(MTD_DEBUG_LEVEL_3, "\t, name=%s, filename=%s\n",
+		DEBUG(MTD_DEBUG_LEVEL3, "\t, name=%s, filename=%s\n",
 			pitpart->name, pitpart->filename);
 
 		for (p = pitpart->name; *p; p++)
@@ -1018,7 +1018,7 @@ static void s3c_read_pit(struct mtd_info *mtd)
 	}
 
 	if (off < mtd->size) {
-		DEBUG(MTD_DEBUG_LEVEL_3, "PIT reservoir at 0x%08llx\n", off);
+		DEBUG(MTD_DEBUG_LEVEL3, "PIT reservoir at 0x%08llx\n", off);
 		memset(&partitions[num_partitions], 0, sizeof(struct mtd_partition));
 		partitions[num_partitions].name = "reservoir";
 		partitions[num_partitions].size = MTDPART_SIZ_FULL;
