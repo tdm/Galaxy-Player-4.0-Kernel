@@ -1,6 +1,9 @@
 on early-init
     start ueventd
 
+# create mountpoints
+    mkdir /mnt 0775 root system
+
 on init
 
 sysclktz 0
@@ -53,10 +56,7 @@ loglevel 7
     mkdir /data 0771 system system
     mkdir /cache 0771 system cache
     mkdir /config 0500 root root
-
     mkdir /efs 0771 system system
-    chown system system /efs
-    chmod 0771 /efs
 
     # Directory for putting things only root should see.
     mkdir /mnt/secure 0700 root root
@@ -105,9 +105,6 @@ loglevel 7
     # 5.0 %
     write /dev/cpuctl/bg_non_interactive/cpu.shares 52
 
-    insmod /lib/modules/fsr.ko
-    insmod /lib/modules/fsr_stl.ko
-
     insmod /lib/modules/Si4709_driver.ko
 
     # ko files for vibrator
@@ -119,23 +116,12 @@ loglevel 7
 on fs
     mount yaffs2 mtd@factoryfs /system
     mount yaffs2 mtd@factoryfs /system ro remount
-
-    mkdir /data
     mount ext4 /dev/block/mmcblk0p2 /data nosuid nodev
-    chown system system /data
-    chmod 0771 /data    
 
     mount yaffs2 mtd@cache /cache nosuid nodev
+    mount yaffs2 mtd@efs /efs ro nosuid nodev
 
-    chown radio system /efs
-    chmod 0771 /efs
-    mount vfat /dev/block/stl3 /efs ro nosuid nodev dmask=022 fmask=0133
-
-    mkdir /dbdata
     mount yaffs2 mtd@dbdatafs /dbdata nosuid nodev
-    chown system system /dbdata
-    chmod 0771 /dbdata
-    chmod 0771 /dbdata
     mkdir /dbdata/databases
     chown system system /dbdata/databases
     chmod 0777 /dbdata/databases
@@ -146,13 +132,14 @@ on fs
     chown system system /dbdata/db-journal
     chmod 0777 /dbdata/db-journal
 
-    insmod /lib/modules/j4fs.ko
     mkdir /mnt/.lfs 0755 root root
-    mount j4fs /dev/block/stl6 /mnt/.lfs
-    insmod /lib/modules/param.ko
-    
+    # XXX: cannot mount
+    # insmod /lib/modules/param.ko
+
     # samsung module
     #insmod /lib/modules/storage.ko
+
+    exec /sbin/load_touchscreen.sh
 
 on post-fs
     # once everything is setup, no need to modify /
@@ -539,7 +526,7 @@ on boot
     #import /system/etc/init.local.rc
 
 # Run sysinit
-    #exec /system/bin/sysinit
+    exec /system/bin/sysinit
 
     class_start default
 

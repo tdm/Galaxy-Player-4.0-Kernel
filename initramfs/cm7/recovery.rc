@@ -33,15 +33,10 @@ loglevel 9
 
 on early-fs
 
-    # bml/stl drivers
-    insmod /lib/modules/fsr.ko
-    insmod /lib/modules/fsr_stl.ko
-
     # parameter block
     mkdir /mnt/.lfs 0755 root root
-    insmod /lib/modules/j4fs.ko
-    mount j4fs /dev/block/stl6 /mnt/.lfs
-    insmod /lib/modules/param.ko
+    # XXX: cannot mount
+    # insmod /lib/modules/param.ko
 
     #temp
     chown root root /sbin/fat.format
@@ -50,14 +45,11 @@ on early-fs
 on fs
     mount tmpfs tmpfs /tmp
     mount yaffs2 mtd@factoryfs /system
-
-    #chown system system /efs
-    #chown radio radio /efs
-    chown radio system /efs
-    chmod 0771 /efs
-    mount vfat /dev/block/stl3 /efs ro nosuid nodev dmask=022 fmask=0133
+    mount yaffs2 mtd@efs /efs ro nosuid nodev
 
     exec apply_disk_policy
+
+    exec /sbin/load_touchscreen.sh
 
 on post-fs
     mount rootfs rootfs / ro remount

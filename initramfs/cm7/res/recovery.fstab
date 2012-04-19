@@ -1,6 +1,6 @@
 [device]
 # mount point	fstype		device			format option	mount option
-/efs		vfat		/dev/block/stl3		default		default
+/efs		yaffs2		efs			default		default
 /system		yaffs2		factoryfs		default		default
 /dbdata		yaffs2		dbdatafs		default		default
 /cache		yaffs2		cache			default		default

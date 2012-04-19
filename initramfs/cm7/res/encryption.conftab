@@ -5,4 +5,4 @@
 /cache /dev/block/mtdblock6 /dev/mapper/cache cache yaffs2 NOT_PROTECTED 
 #/data/data /dev/block/mmcblk0p3 /dev/mapper/dataprivate dataprivate yaffs2 PROTECTED_WITHOUT_PASSWORD 
 /ext_sdcard /dev/block/mmcblk1 /dev/mapper/extsdcard sdcard1 vfat PROTECTED_WITH_PASSWORD 
-/efs /dev/block/stl3 /dev/mapper/efs efs vfat NOT_PROTECTED
+/efs /dev/block/mtdblock0 /dev/mapper/efs efs yaffs2 NOT_PROTECTED
