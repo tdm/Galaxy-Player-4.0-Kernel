@@ -2110,7 +2110,7 @@ static struct i2c_board_info i2c_devs4[] __initdata = {
 static struct i2c_board_info i2c_devs1[] __initdata = {
 };
 
-#ifdef CONFIG_TOUCHSCREEN_QT602240
+#if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_QT602240_MODULE)
 int keyled_onoff(int onoff)
 {
 	struct regulator *regulator;

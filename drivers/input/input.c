@@ -361,11 +361,9 @@ void input_event(struct input_dev *dev,
 	}
 #elif 1	/*defined (CONFIG_KEYBOARD_GPIO)*/
 #if defined(CONFIG_MACH_ARIES) /* palladio */
-#if defined(CONFIG_ARIES_USA)
-	if ((strcmp(dev->name, "aries-keypad") == 0) || (strcmp(dev->name, "qt602240_ts_input") == 0)){	
-#else
-	if (strcmp(dev->name, "aries-keypad") == 0) {
-#endif
+	/* XXXTDM: is this going to work for intl devices? */
+	if (!strcmp(dev->name, "aries-keypad") ||
+	    !strcmp(dev->name, "qt602240_ts_input")) {
 	
 #elif defined(CONFIG_MACH_VENTURI)
 #if defined(CONFIG_VENTURI_USA)

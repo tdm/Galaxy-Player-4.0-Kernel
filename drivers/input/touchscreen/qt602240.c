@@ -30,6 +30,10 @@
 static int touch_cpu_freq_flag;
 #endif
 
+extern void set_stftd(int (*func)(int));
+
+static unsigned int aries_usa = 0;
+
 struct i2c_driver qt602240_i2c_driver;
 
 struct workqueue_struct *qt602240_wq = NULL;
@@ -482,13 +486,14 @@ void qt_KeyArray_Init(void)
 	}	
 #endif
 	keyarray_config.yorigin = 11;
-#ifdef CONFIG_ARIES_USA
-	keyarray_config.xsize = 3;
-	keyarray_config.ysize = 2;
-#else
-	keyarray_config.xsize = 2;
-	keyarray_config.ysize = 1;
-#endif
+	if (aries_usa) {
+		keyarray_config.xsize = 3;
+		keyarray_config.ysize = 2;
+	}
+	else {
+		keyarray_config.xsize = 2;
+		keyarray_config.ysize = 1;
+	}
 	keyarray_config.akscfg = 1;
 	keyarray_config.blen = 0;
 	keyarray_config.tchthr = 45;
@@ -2987,7 +2992,7 @@ static int set_tsp_threshhold(bool state)
 	return 1;
 }
 
-int set_tsp_for_ta_detect(int state)
+static int set_tsp_for_ta_detect(int state)
 {
 	int ret = 1;
 
@@ -3202,9 +3207,8 @@ void  get_message(void)
 					if (checkTSPKEYdebuglevel != KERNEL_SEC_DEBUG_LEVEL_LOW)
 						printk("%s : BACK KEY\n", __func__);
 				}
-#ifdef CONFIG_ARIES_USA
-				else if (quantum_msg[2] == 4) {
-					/* back key */
+				else if (aries_usa && quantum_msg[2] == 4) {
+					/* towe key */
 					input_report_key(qt602240->input_dev, KEY_HOME, 1);
 					input_sync(qt602240->input_dev);
 					keycode = KEY_HOME;//TOUCHKEY_KEYCODE_HOME;
@@ -3212,7 +3216,6 @@ void  get_message(void)
 					if (checkTSPKEYdebuglevel != KERNEL_SEC_DEBUG_LEVEL_LOW)
 						printk("%s : HOME KEY\n", __func__);
 				} 
-#endif
 				else {
 					/* error */
 					printk(KERN_ERR"[%s] error : invalid key ID\n", __FUNCTION__);
@@ -3651,6 +3654,8 @@ int qt602240_probe(struct i2c_client *client,
 	printk(KERN_DEBUG "|  Quantum Touch Driver Probe!            |\n");
 	printk(KERN_DEBUG"+-----------------------------------------+\n");
 
+	printk(KERN_DEBUG "qt602240: aries_usa=%u\n", aries_usa);
+
 #ifdef CONFIG_MACH_AEGIS	
 	gpio_set_value(TOUCHKEY_VDD_EN, 1);
 	msleep(5);
@@ -3674,9 +3679,9 @@ int qt602240_probe(struct i2c_client *client,
 
 	set_bit(KEY_MENU, qt602240->input_dev->keybit); 
 	set_bit(KEY_BACK, qt602240->input_dev->keybit);
-#ifdef CONFIG_ARIES_USA
-	set_bit(KEY_HOME, qt602240->input_dev->keybit);
-#endif
+	if (aries_usa) {
+		set_bit(KEY_HOME, qt602240->input_dev->keybit);
+	}
 	input_set_abs_params(qt602240->input_dev, ABS_X, 0, 479, 0, 0);
 	input_set_abs_params(qt602240->input_dev, ABS_Y, 0, 799, 0, 0);
 	input_set_abs_params(qt602240->input_dev, ABS_PRESSURE, 0, 255, 0, 0);
@@ -6597,6 +6602,8 @@ int __init qt602240_init(void)
 		fingerInfo[i].pressure = -1;
 #endif
 
+	set_stftd(set_tsp_for_ta_detect);
+
 	dprintk("[QT] %s/%d, platform_driver_register!!\n",__func__,__LINE__);
 
 	return 0;
@@ -6604,12 +6611,17 @@ int __init qt602240_init(void)
 
 void __exit qt602240_exit(void)
 {
+	set_stftd(NULL);
+
 	i2c_del_driver(&qt602240_i2c_driver);
 	if (qt602240_wq)
 		destroy_workqueue(qt602240_wq);
 }
-late_initcall(qt602240_init);
+module_init(qt602240_init);
 module_exit(qt602240_exit);
 
 MODULE_DESCRIPTION("Quantum Touchscreen Driver");
 MODULE_LICENSE("GPL");
+
+module_param(aries_usa, int, 0444);
+MODULE_PARM_DESC(aries_usa, "Specify Aries USA device (default 0)");

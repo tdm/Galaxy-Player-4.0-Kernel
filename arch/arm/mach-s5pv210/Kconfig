@@ -174,12 +174,6 @@ config ARIES_LATONA
 	help
 	Select S1 LATONA
 
-config ARIES_USA
-	bool "select S1 USA"
-	depends on MACH_ARIES
-	help
-	Select S1 USA
-
 # Usys_sadang KH21 [[
 config ARIES_KOR
 	bool "select S1 KOR"
