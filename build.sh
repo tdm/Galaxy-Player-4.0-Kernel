@@ -3,8 +3,8 @@
 set -e
 
 export CROSS_COMPILE="/usr/local/arm-2009q3/bin/arm-none-eabi-"
-export KBUILD_BUILD_VERSION="tdm1.0beta1"
-export LOCALVERSION="-G1XXKPN-CL562447"
+export KBUILD_BUILD_VERSION="tdm1.0beta2"
+#export LOCALVERSION="-G1XXKPN-CL562447"
 
 which ccache >/dev/null 2>&1
 if [ $? -eq 0 ]; then
@@ -17,7 +17,7 @@ usage()
 {
 	echo "Usage: build.sh <model> <project>"
 	echo "Usage: build.sh clean"
-	echo "  eg. build.sh ypg1_usa cm7"
+	echo "  eg. build.sh ypg1 cm7"
 	exit 1
 }
 
@@ -47,23 +47,25 @@ if [ ! -f ".config" -o "$model" != "$lastmodel" ]; then
 	make tdm_${model}_defconfig
 fi
 
-initramfsdir=$(grep "^CONFIG_INITRAMFS_SOURCE" .config | \
+initramfs_source=$(grep "^CONFIG_INITRAMFS_SOURCE" .config | \
 	cut -d'=' -f2 | sed 's/"//g')
-if [ -z "$initramfsdir" ]; then
+if [ -z "$initramfs_source" ]; then
 	echo "Cannot find initramfs dir in config"
 	exit 1
 fi
 
-rm -rf "$initramfsdir"
-mkdir -p "$initramfsdir"
-if [ -d "initramfs/common" ]; then
-	cp -a initramfs/common/* "$initramfsdir"
-fi
-cp -a initramfs/${project}/* "$initramfsdir"
+rm -f usr/initramfs_data.cpio
 
-make -j${cpus}
-mkdir -p "$initramfsdir/lib/modules"
-cp $(find . -name "*.ko" | grep -v "$initramfsdir") "$initramfsdir/lib/modules"
+# XXX: check whether file or dir
+initramfs_dir=$(dirname $initramfs_source)
+
+rm -rf "$initramfs_dir"
+mkdir -p "$initramfs_dir"
+if [ -d "initramfs/common" ]; then
+	cp -a initramfs/common/* "$initramfs_source"
+fi
+cp -a initramfs/${project}/* "$initramfs_dir"
+
 make -j${cpus}
 cp arch/arm/boot/zImage kernel-${model}-${project}.bin
 md5sum kernel-${model}-${project}.bin
