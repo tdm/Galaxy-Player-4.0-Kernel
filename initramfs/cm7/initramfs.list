@@ -59,7 +59,6 @@ file /lib/modules/qt602240.ko drivers/input/touchscreen/qt602240.ko 644 0 0
 file /stage1/busybox usr/initramfs/busybox 755 0 0
 file /stage1/bml_over_mtd usr/initramfs/bml_over_mtd 755 0 0
 file /stage1/init usr/initramfs/init 755 0 0
-file /stage1/adbd usr/initramfs/adbd 755 0 0
 slink /stage1/cat busybox 755 0 0
 slink /stage1/cp busybox 755 0 0
 slink /stage1/cpio busybox 755 0 0
