@@ -6420,10 +6420,20 @@ static DEVICE_ATTR(config_mode, 0664, qt602240_config_mode_show, qt602240_config
 #endif
 /*------------------------------ for tunning ATmel - end ----------------------------*/
 
+extern const char *samsung_efs_buyer_code(void);
+static void __init qt602240_read_buyer_code(void)
+{
+	const char *buyer_code = samsung_efs_buyer_code();
+	printk(KERN_DEBUG "qt602240: buyer_code=<%s>\n", buyer_code, buyer_code);
+	aries_usa = !strcmp(buyer_code, "XAA");
+}
+
 int __init qt602240_init(void)
 {
 	int ret;
 	int i=0;
+
+	qt602240_read_buyer_code();
 
 	DEBUG;
 
